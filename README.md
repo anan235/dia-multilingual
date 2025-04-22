@@ -1,143 +1,84 @@
-<p align="center">
-<a href="https://github.com/nari-labs/dia">
-<img src="./dia/static/images/banner.png">
-</a>
-</p>
-<p align="center">
-<a href="https://tally.so/r/meokbo" target="_blank"><img alt="Static Badge" src="https://img.shields.io/badge/Join-Waitlist-white?style=for-the-badge"></a>
-<a href="https://discord.gg/pgdB5YRe" target="_blank"><img src="https://img.shields.io/badge/Discord-Join%20Chat-7289DA?logo=discord&style=for-the-badge"></a>
-<a href="https://github.com/nari-labs/dia/blob/main/LICENSE" target="_blank"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=for-the-badge" alt="LICENSE"></a>
-</p>
-<p align="center">
-<a href="https://huggingface.co/nari-labs/Dia-1.6B"><img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-lg-dark.svg" alt="Dataset on HuggingFace" height=42 ></a>
-<a href="https://huggingface.co/spaces/nari-labs/Dia-1.6B"><img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-lg-dark.svg" alt="Space on HuggingFace" height=38></a>
-</p>
+# DIA-Multilingual (StyleTTS2-based)
 
-Dia is a 1.6B parameter text to speech model created by Nari Labs.
+This is a fork of the original DIA model extended for **multilingual TTS**, with support for 30+ languages (same as ElevenLabs). Built on top of StyleTTS2 with language token injection, espeak-ng phonemization, and support for reference audio-based style transfer.
 
-Dia **directly generates highly realistic dialogue from a transcript**. You can condition the output on audio, enabling emotion and tone control. The model can also produce nonverbal communications like laughter, coughing, clearing throat, etc.
+---
 
-To accelerate research, we are providing access to pretrained model checkpoints and inference code. The model weights are hosted on [Hugging Face](https://huggingface.co/nari-labs/Dia-1.6B). The model only supports English generation at the moment.
+## 🧠 Supported Languages
 
-We also provide a [demo page](https://yummy-fir-7a4.notion.site/dia) comparing our model to [ElevenLabs Studio](https://elevenlabs.io/studio) and [Sesame CSM-1B](https://github.com/SesameAILabs/csm).
+Supports over 30 languages via `<lang>` token injection, including:
 
-- (Update) We have a ZeroGPU Space running! Try it now [here](https://huggingface.co/spaces/nari-labs/Dia-1.6B). Thanks to the HF team for the support :)
-- Join our [discord server](https://discord.gg/pgdB5YRe) for community support and access to new features.
-- Play with a larger version of Dia: generate fun conversations, remix content, and share with friends. 🔮 Join the [waitlist](https://tally.so/r/meokbo) for early access.
+`en`, `es`, `de`, `fr`, `it`, `pt`, `pl`, `ro`, `nl`, `tr`, `sv`, `cs`, `el`, `hu`, `fi`, `da`, `sk`, `bg`, `hi`, `ar`, `zh`, `ja`, `ko`, ...
 
-## ⚡️ Quickstart
+---
 
-### Install via pip
+## 🚀 Quickstart (RunPod)
+
+**Build your container:**
+```bash
+docker build -t dia-multilang -f docker/Dockerfile .
+```
+
+**Launch training (inside container):**
+```bash
+bash docker/launch.sh
+```
+
+This will:
+- Load `train_manifest.json` and `lang_vocab.json`
+- Start training from scratch using espeak-based phoneme inputs
+- Save checkpoints in `/workspace/checkpoints`
+
+---
+
+## 🧾 File Structure
 
 ```bash
-# Install directly from GitHub
-pip install git+https://github.com/nari-labs/dia.git
+├── dataset/
+│   └── multilang_tts_dataset.py     # Dataset + phonemizer + collate_fn
+├── scripts/
+│   ├── train_dia.py                 # Main training loop
+│   ├── validate.py                  # Eval script (loss only)
+│   └── infer_dia.py                 # Generate audio from text
+├── docker/
+│   ├── Dockerfile                   # GPU-enabled training container
+│   └── launch.sh                    # Entrypoint script
+├── lang_vocab.json                  # Maps <lang> → token_id
+├── train_manifest.json              # Manifest (audio, text, lang)
 ```
 
-### Run the Gradio UI
+---
 
-This will open a Gradio UI that you can work on.
+## 🎙️ Inference
+
+Generate audio from text using:
 
 ```bash
-git clone https://github.com/nari-labs/dia.git
-cd dia && uv run app.py
+python3 scripts/infer_dia.py \
+  --model_path checkpoints/epoch49.pt \
+  --lang_vocab lang_vocab.json \
+  --text "Ciao, come stai?" \
+  --lang it \
+  --output_dir samples/
 ```
 
-or if you do not have `uv` pre-installed:
+To use reference audio (zero-shot style cloning):
 
 ```bash
-git clone https://github.com/nari-labs/dia.git
-cd dia
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-python app.py
+  --reference_wav samples/italian_female.wav
 ```
 
-Note that the model was not fine-tuned on a specific voice. Hence, you will get different voices every time you run the model.
-You can keep speaker consistency by either adding an audio prompt (a guide coming VERY soon - try it with the second example on Gradio for now), or fixing the seed.
+---
 
-## Features
+## 💡 Notes
 
-- Generate dialogue via `[S1]` and `[S2]` tag
-- Generate non-verbal like `(laughs)`, `(coughs)`, etc.
-- Voice cloning. See [`example/voice_clone.py`](example/voice_clone.py) for more information.
-  - In the Hugging Face space, you can upload the audio you want to clone and place its transcript before your script. Make sure the transcript follows the required format. The model will then output only the content of your script.
+- Uses espeak-ng to phonemize all input text (per-language IPA)
+- Pretrained `xlm-roberta-base` recommended for phoneme encodings
+- Output speech is high-fidelity and respects cross-language style transfer
 
-## ⚙️ Usage
+---
 
-### As a Python Library
-
-```python
-import soundfile as sf
-
-from dia.model import Dia
-
-
-model = Dia.from_pretrained("nari-labs/Dia-1.6B")
-
-text = "[S1] Dia is an open weights text to dialogue model. [S2] You get full control over scripts and voices. [S1] Wow. Amazing. (laughs) [S2] Try it now on Git hub or Hugging Face."
-
-output = model.generate(text)
-
-sf.write("simple.mp3", output, 44100)
-```
-
-A pypi package and a working CLI tool will be available soon.
-
-## 💻 Hardware and Inference Speed
-
-Dia has been tested on only GPUs (pytorch 2.0+, CUDA 12.6). CPU support is to be added soon.
-The initial run will take longer as the Descript Audio Codec also needs to be downloaded.
-
-On enterprise GPUs, Dia can generate audio in real-time. On older GPUs, inference time will be slower.
-For reference, on a A4000 GPU, Dia roughly generates 40 tokens/s (86 tokens equals 1 second of audio).
-`torch.compile` will increase speeds for supported GPUs.
-
-The full version of Dia requires around 10GB of VRAM to run. We will be adding a quantized version in the future.
-
-If you don't have hardware available or if you want to play with bigger versions of our models, join the waitlist [here](https://tally.so/r/meokbo).
-
-## 🪪 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## ⚠️ Disclaimer
-
-This project offers a high-fidelity speech generation model intended for research and educational use. The following uses are **strictly forbidden**:
-
-- **Identity Misuse**: Do not produce audio resembling real individuals without permission.
-- **Deceptive Content**: Do not use this model to generate misleading content (e.g. fake news)
-- **Illegal or Malicious Use**: Do not use this model for activities that are illegal or intended to cause harm.
-
-By using this model, you agree to uphold relevant legal standards and ethical responsibilities. We **are not responsible** for any misuse and firmly oppose any unethical usage of this technology.
-
-## 🔭 TODO / Future Work
-
-- Docker support.
-- Optimize inference speed.
-- Add quantization for memory efficiency.
-
-## 🤝 Contributing
-
-We are a tiny team of 1 full-time and 1 part-time research-engineers. We are extra-welcome to any contributions!
-Join our [Discord Server](https://discord.gg/pgdB5YRe) for discussions.
-
-## 🤗 Acknowledgements
-
-- We thank the [Google TPU Research Cloud program](https://sites.research.google/trc/about/) for providing computation resources.
-- Our work was heavily inspired by [SoundStorm](https://arxiv.org/abs/2305.09636), [Parakeet](https://jordandarefsky.com/blog/2024/parakeet/), and [Descript Audio Codec](https://github.com/descriptinc/descript-audio-codec).
-- HuggingFace for providing the ZeroGPU Grant.
-- "Nari" is a pure Korean word for lily.
-- We thank Jason Y. for providing help with data filtering.
-
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/#nari-labs/dia&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nari-labs/dia&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nari-labs/dia&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=nari-labs/dia&type=Date" />
- </picture>
-</a>
+## 🧠 Credits
+Built on top of:
+- [DIA](https://github.com/nari-labs/dia)
+- [StyleTTS2](https://github.com/yl4579/StyleTTS2)

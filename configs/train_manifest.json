@@ -1,0 +1,14 @@
+[
+  {
+    "audio": "data/en/clips/sample1.wav",
+    "text": "Hello world",
+    "phonemes": "h\u0259\u02c8lo\u028a w\u025d\u02d0ld",
+    "lang": "en"
+  },
+  {
+    "audio": "data/es/clips/sample2.wav",
+    "text": "Hola mundo",
+    "phonemes": "ola mundo",
+    "lang": "es"
+  }
+]
