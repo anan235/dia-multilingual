@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as FCan you
+import torch.nn.functional as F
 
 class DiaModel(nn.Module):
     def __init__(self, config):
