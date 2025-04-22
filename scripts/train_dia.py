@@ -1,6 +1,7 @@
 import argparse, json
 from torch.utils.data import DataLoader
 from dataset.multilang_tts_dataset import MultilangTTSDataset, collate_fn
+from tools.speaker_encoder import SpeakerEncoder
 from dia.model import DiaModel
 import torch
 import os
@@ -20,13 +21,16 @@ lang_vocab = json.load(open(args.lang_vocab))
 dataset = MultilangTTSDataset(args.manifest, lang_vocab)
 dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, num_workers=args.num_workers)
 
-model = DiaModel(lang_vocab=lang_vocab)  # Adjust if constructor differs
+model = DiaModel(lang_vocab=lang_vocab)
 optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+spk_encoder = SpeakerEncoder()
 
 os.makedirs(args.output_dir, exist_ok=True)
 
 for epoch in range(args.epochs):
     for batch in dataloader:
+        with torch.no_grad():
+            batch["spk_embed"] = torch.stack([spk_encoder.encode(p) for p in batch["path"]])
         loss = model(batch)
         loss.backward()
         optimizer.step()
