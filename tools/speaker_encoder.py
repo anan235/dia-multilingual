@@ -5,7 +5,10 @@ from speechbrain.pretrained import EncoderClassifier
 class SpeakerEncoder:
     def __init__(self, device="cuda" if torch.cuda.is_available() else "cpu"):
         self.model = EncoderClassifier.from_hparams(
-            source="speechbrain/spkrec-ecapa-voxceleb",
+            # Conformer‑Based Multilingual Speaker Encoder
+            # Model: tflite-hub/conformer-speaker-encoder
+            # Architecture: Conformer | Loss: GE2E | Languages: 100+
+            source="tflite-hub/conformer-speaker-encoder",
             run_opts={"device": device}
         )
 
